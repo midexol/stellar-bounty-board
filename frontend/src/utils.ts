@@ -1,6 +1,7 @@
 import { Bounty, BountyStatus } from "./types";
 import { FilterState } from "./constants";
 
+
 // Simple debounce function for search
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
@@ -103,7 +104,7 @@ export function sortBounties(bounties: Bounty[], sort: SortState): Bounty[] {
     
     switch (sort.option) {
       case "reward-high":
-        comparison = b.amount - a.amount;
+        comparison = a.amount - b.amount;
         break;
       case "reward-low":
         comparison = a.amount - b.amount;
@@ -112,13 +113,13 @@ export function sortBounties(bounties: Bounty[], sort: SortState): Bounty[] {
         comparison = a.deadlineAt - b.deadlineAt;
         break;
       case "deadline-latest":
-        comparison = b.deadlineAt - a.deadlineAt;
+        comparison = a.deadlineAt - b.deadlineAt;
         break;
       case "newest":
-        comparison = b.createdAt - a.createdAt;
+        comparison = a.createdAt - b.createdAt;
         break;
       case "oldest":
-        comparison = b.createdAt - b.createdAt;
+        comparison = a.createdAt - b.createdAt;
         break;
     }
     
@@ -150,6 +151,58 @@ export function getActiveRewardLabel(
   }
   
   return `${min} - ${max} XLM`;
+}
+
+const XLM_USD_PRICE_URL =
+  "https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=usd";
+const XLM_USD_CACHE_MS = 5 * 60 * 1000;
+
+let cachedXlmUsdRate: { rate: number; fetchedAt: number } | null = null;
+
+async function fetchXlmUsdRate(): Promise<number> {
+  if (cachedXlmUsdRate && Date.now() - cachedXlmUsdRate.fetchedAt < XLM_USD_CACHE_MS) {
+    return cachedXlmUsdRate.rate;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const response = await fetch(XLM_USD_PRICE_URL, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch XLM/USD rate: ${response.status}`);
+    }
+
+    const data = (await response.json()) as { stellar?: { usd?: number } };
+    const rate = data.stellar?.usd;
+
+    if (typeof rate !== "number" || !Number.isFinite(rate)) {
+      throw new Error("CoinGecko response did not include a numeric XLM/USD rate");
+    }
+
+    cachedXlmUsdRate = { rate, fetchedAt: Date.now() };
+    return rate;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+export async function xlmToUsd(amount: number): Promise<string> {
+  try {
+    const rate = await fetchXlmUsdRate();
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount * rate);
+  } catch {
+    return "USD unavailable";
+  }
+}
+
+export function resetXlmToUsdCache(): void {
+  cachedXlmUsdRate = null;
 }
 
 export function getContributorMetrics(bounties: Bounty[], contributorAddress?: string) {
@@ -192,4 +245,42 @@ export function getContributorMetrics(bounties: Bounty[], contributorAddress?: s
     releasedTotalsByAsset,
     filtered: contributorBounties,
   };
+}
+
+let cachedRate: number | null = null;
+let cacheTimestamp: number = 0;
+let pendingRequest: Promise<number | null> | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetches the current XLM/USD rate from CoinGecko with a 5-minute cache.
+ */
+export async function getXlmRate(): Promise<number | null> {
+  const now = Date.now();
+  if (cachedRate !== null && now - cacheTimestamp < CACHE_DURATION) {
+    return cachedRate;
+  }
+
+  if (pendingRequest) return pendingRequest;
+
+  pendingRequest = (async () => {
+    try {
+      const response = await fetch(
+        "https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=usd"
+      );
+      if (!response.ok) throw new Error("API response not ok");
+      const data = await response.json();
+      cachedRate = data.stellar.usd;
+      cacheTimestamp = Date.now();
+      return cachedRate;
+    } catch (error) {
+      console.error("Failed to fetch XLM/USD rate:", error);
+      // Fallback to last known rate if available
+      return cachedRate;
+    } finally {
+      pendingRequest = null;
+    }
+  })();
+
+  return pendingRequest;
 }

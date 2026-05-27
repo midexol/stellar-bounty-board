@@ -36,9 +36,12 @@ export interface Bounty {
   tokenSymbol: string;
   amount: number;
   labels: GithubLabel[];
+
   status: BountyStatus;
   createdAt: number;
   deadlineAt: number;
+  /** ISO 8601 date string representing when the bounty expires. Added in Wave 4. */
+  expiresAt?: string;
   reservedAt?: number;
   submittedAt?: number;
   releasedAt?: number;

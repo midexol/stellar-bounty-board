@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUpRight,
   Coins,
@@ -9,12 +9,14 @@ import {
   FolderGit2,
   GitBranch,
   HandCoins,
+  Moon,
   Plus,
   Rocket,
   Search,
   ShieldCheck,
   SlidersHorizontal,
   Star,
+  Sun,
   Trash2,
   Upload,
   UserRound,
@@ -37,16 +39,43 @@ import SubmissionChecklistModal, { type SubmissionFormData } from "./SubmissionC
 import { BountyRecommendation, ContributorProfile, createDefaultProfile, generateRecommendations, updateProfileFromBounties } from "./recommendations";
 import RecommendedBounties from "./RecommendedBounties";
 import { statusCopy, actionCopy, readInitialFilters, FilterState, statusOptions, statusGlossary, sortOptions } from "./constants";
-import { filterBounties, getRewardBounds, getActiveRewardLabel, getContributorMetrics, getUniqueRepos, getRepoMetrics, sortBounties, debounce, SortOption, SortState } from "./utils";
+import { filterBounties, getRewardBounds, getActiveRewardLabel, getContributorMetrics, getUniqueRepos, getRepoMetrics, sortBounties, debounce, SortOption, SortState, xlmToUsd } from "./utils";
 import { Bounty, CreateBountyPayload, OpenIssue, BountyStatus } from "./types";
 
 import GitHubIssuePreviewCard from "./GitHubIssuePreviewCard";
 import BountyDetailPage from "./BountyDetailPage";
+import UsdAmount from "./UsdAmount";
 
 import SkeletonBountyCard from "./SkeletonBountyCard";
 
 const STELLAR_PUBLIC_KEY_HINT = "Expected Stellar public key (starts with G and is 56 characters).";
 const STELLAR_PUBLIC_KEY_REGEX = /^G[A-Z2-7]{55}$/;
+
+const DARK_MODE_KEY = "stellar-bounty-board:theme";
+
+function useDarkMode() {
+  const [dark, setDark] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem(DARK_MODE_KEY);
+      if (stored !== null) return stored === "dark";
+    } catch {
+      // ignore
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", dark ? "dark" : "light");
+    try {
+      localStorage.setItem(DARK_MODE_KEY, dark ? "dark" : "light");
+    } catch {
+      // ignore
+    }
+  }, [dark]);
+
+  return { dark, toggle: () => setDark((d) => !d) };
+}
 
 const initialForm: CreateBountyPayload = {
   repo: "ritik4ever/stellar-stream",
@@ -92,6 +121,14 @@ const contributorStatuses: Array<BountyStatus | "all"> = [
   "refunded",
   "expired",
 ];
+const boardStatuses: Array<BountyStatus | "all"> = [
+  "all",
+  "open",
+  "reserved",
+  "submitted",
+  "released",
+  "refunded",
+];
 
 type BountyAction = "reserve" | "submit" | "release" | "refund";
 
@@ -104,7 +141,165 @@ function formatTimestamp(value?: number): string {
   return new Date(value * 1000).toLocaleString();
 }
 
+const BountyAmount = memo(function BountyAmount({ bounty }: { bounty: Bounty }) {
+  const [usdAmount, setUsdAmount] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    if (bounty.tokenSymbol.toUpperCase() !== "XLM") {
+      setUsdAmount(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    setUsdAmount(null);
+    void xlmToUsd(bounty.amount).then((value) => {
+      if (active) {
+        setUsdAmount(value);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [bounty.amount, bounty.tokenSymbol]);
+
+  return (
+    <div className="amount-chip">
+      <strong>{bounty.amount} {bounty.tokenSymbol}</strong>
+      {usdAmount && <span>{usdAmount}</span>}
+    </div>
+  );
+});
+
+type BountyCardProps = {
+  bounty: Bounty;
+  onOpen: (id: string) => void;
+  renderActionButton: (
+    bounty: Bounty,
+    action: { action: "reserve" | "submit" | "release" | "refund"; label: string; title: string },
+  ) => ReactNode;
+};
+
+// Custom comparator: skip re-renders when the underlying bounty data is
+// unchanged, even if parent recreated callback identities. `statusCopy` and
+// `actionCopy` come from a stable module-scope import.
+function bountyCardPropsEqual(prev: BountyCardProps, next: BountyCardProps): boolean {
+  const a = prev.bounty;
+  const b = next.bounty;
+  return (
+    a.id === b.id &&
+    a.status === b.status &&
+    a.amount === b.amount &&
+    a.tokenSymbol === b.tokenSymbol &&
+    a.contributor === b.contributor &&
+    a.maintainer === b.maintainer &&
+    a.title === b.title &&
+    a.summary === b.summary &&
+    a.deadlineAt === b.deadlineAt &&
+    a.submissionUrl === b.submissionUrl &&
+    a.releasedTxHash === b.releasedTxHash &&
+    a.refundedTxHash === b.refundedTxHash &&
+    a.labels === b.labels
+  );
+}
+
+const BountyCard = memo(function BountyCard({ bounty, onOpen, renderActionButton }: BountyCardProps) {
+  return (
+    <article
+      className="bounty-card"
+      role="link"
+      tabIndex={0}
+      onClick={() => onOpen(bounty.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(bounty.id);
+        }
+      }}
+    >
+      <div className="bounty-card__top">
+        <div>
+          <span
+            className={`status-pill status-pill--${bounty.status}`}
+            title={statusCopy[bounty.status].description}
+            aria-label={`${statusCopy[bounty.status].label}: ${statusCopy[bounty.status].description}`}
+          >
+            {statusCopy[bounty.status].label}
+          </span>
+          <h3>{bounty.title}</h3>
+        </div>
+      </div>
+
+      <p className="bounty-summary">{bounty.summary}</p>
+
+      <div className="meta-grid">
+        <div>
+          <span className="meta-label">Issue</span>
+          <strong>
+            <a
+              className="inline-link"
+              href={`https://github.com/${bounty.repo}/issues/${bounty.issueNumber}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {bounty.repo} #{bounty.issueNumber}
+            </a>
+          </strong>
+        </div>
+        <div>
+          <span className="meta-label">Deadline</span>
+          <strong>{formatRelativeDeadline(bounty.deadlineAt)}</strong>
+        </div>
+        <div>
+          <span className="meta-label">Maintainer</span>
+          <strong>{shortAddress(bounty.maintainer)}</strong>
+        </div>
+        <div>
+          <span className="meta-label">Contributor</span>
+          <strong>{bounty.contributor ? shortAddress(bounty.contributor) : "Open"}</strong>
+        </div>
+        {bounty.status === "released" && bounty.releasedTxHash && (
+          <div>
+            <span className="meta-label">Release tx</span>
+            <strong>{`${bounty.releasedTxHash.slice(0, 10)}...`}</strong>
+          </div>
+        )}
+        {bounty.status === "refunded" && bounty.refundedTxHash && (
+          <div>
+            <span className="meta-label">Refund tx</span>
+            <strong>{`${bounty.refundedTxHash.slice(0, 10)}...`}</strong>
+          </div>
+        )}
+      </div>
+
+      <div className="chip-row">
+        {bounty.labels.map((label) => (
+          <span className="chip" key={label.name}>{label.name}</span>
+        ))}
+      </div>
+
+      <p className="status-helper">
+        <strong>{statusCopy[bounty.status].label}:</strong> {statusCopy[bounty.status].description}
+      </p>
+
+      {bounty.submissionUrl && (
+        <a className="submission-link" href={bounty.submissionUrl} target="_blank" rel="noreferrer">
+          Review submission <ArrowUpRight size={16} />
+        </a>
+      )}
+
+      <div className="action-row">
+        {(actionCopy[bounty.status] ?? []).map((action) => renderActionButton(bounty, action))}
+      </div>
+    </article>
+  );
+}, bountyCardPropsEqual);
+
 function App() {
+  const { dark, toggle: toggleDark } = useDarkMode();
   const initialFilters = useMemo(() => readInitialFilters(), []);
   const [form, setForm] = useState<CreateBountyPayload>(initialForm);
   const [bounties, setBounties] = useState<Bounty[]>([]);
@@ -130,6 +325,13 @@ function App() {
   const [sortOption, setSortOption] = useState(initialFilters.sortOption);
   const [sortDirection, setSortDirection] = useState(initialFilters.sortDirection);
   const [pathname, setPathname] = useState(window.location.pathname);
+  const detailId = useMemo(() => {
+    const match = pathname.match(/^\/bounties\/([^/]+)$/);
+    return match ? decodeURIComponent(match[1] ?? "") : null;
+  }, [pathname]);
+  const detailIdRef = useRef<string | null>(detailId);
+  const [detailBounty, setDetailBounty] = useState<Bounty | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [profileContributor, setProfileContributor] = useState("");
   const [profileStatus, setProfileStatus] = useState<"all" | BountyStatus>("all");
 
@@ -139,38 +341,58 @@ function App() {
   const [submissionModalError, setSubmissionModalError] = useState<string | null>(null);
   const [submissionModalData, setSubmissionModalData] = useState<Partial<SubmissionFormData> | undefined>(undefined);
 
+  useEffect(() => {
+    detailIdRef.current = detailId;
+  }, [detailId]);
 
 
-  async function refresh(): Promise<void> {
-    const [bountyData, issueData] = await Promise.all([listBounties(), listOpenIssues()]);
+  async function refresh(signal?: AbortSignal): Promise<void> {
+    const [bountyData, issueData] = await Promise.all([
+      listBounties(signal),
+      listOpenIssues(signal),
+    ]);
     setBounties(bountyData);
     setIssues(issueData);
+
+    const currentDetailId = detailIdRef.current;
+    if (currentDetailId) {
+      const refreshedDetailBounty = bountyData.find((bounty) => bounty.id === currentDetailId);
+      if (refreshedDetailBounty) {
+        setDetailBounty(refreshedDetailBounty);
+      }
+    }
   }
 
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
+    const { signal } = controller;
 
     async function bootstrap() {
       try {
-        await refresh();
+        await refresh(signal);
       } catch (err) {
-        if (active) {
-          setError(err instanceof Error ? err.message : "Failed to load project data.");
-        }
+        if (signal.aborted) return; // component unmounted — ignore
+        setError(err instanceof Error ? err.message : "Failed to load project data.");
       } finally {
-        if (active) {
+        if (!signal.aborted) {
           setLoading(false);
         }
       }
     }
 
     void bootstrap();
+
     const timer = window.setInterval(() => {
-      void refresh().catch(() => undefined);
+      const pollController = new AbortController();
+      void refresh(pollController.signal).catch((err) => {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
+          // Silent poll failure — do not surface to user
+        }
+      });
     }, 7000);
 
     return () => {
-      active = false;
+      controller.abort();
       window.clearInterval(timer);
     };
   }, []);
@@ -267,8 +489,6 @@ function App() {
   }, [bounties, profileContributor]);
 
   const [profile, setProfile] = useState(() => createDefaultProfile());
-  const [detailBounty, setDetailBounty] = useState<Bounty | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
   const recommendations = useMemo(() => {
     return generateRecommendations(bounties, profile);
   }, [bounties, profile]);
@@ -324,6 +544,13 @@ function App() {
     }
   }
 
+  const handleOpenBounty = useCallback(
+    (id: string) => {
+      navigate(`/bounties/${encodeURIComponent(id)}`);
+    },
+    [navigate],
+  );
+
   function renderActionButton(
     bounty: Bounty,
     action: { action: BountyAction; label: string; title: string },
@@ -357,11 +584,6 @@ function App() {
       </button>
     );
   }
-
-  const detailId = useMemo(() => {
-    const match = pathname.match(/^\/bounties\/([^/]+)$/);
-    return match ? decodeURIComponent(match[1] ?? "") : null;
-  }, [pathname]);
 
   const repoRoute = useMemo(() => {
     const match = pathname.match(/^\/repo\/([^/]+)\/([^/]+)$/);
