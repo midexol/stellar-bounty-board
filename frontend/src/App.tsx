@@ -37,6 +37,7 @@ import {
 import SubmissionChecklistModal, { type SubmissionFormData } from "./SubmissionChecklistModal";
 import { BountyRecommendation, ContributorProfile, createDefaultProfile, generateRecommendations, updateProfileFromBounties } from "./recommendations";
 import RecommendedBounties from "./RecommendedBounties";
+import ErrorBoundary from "./ErrorBoundary";
 import { statusCopy, actionCopy, readInitialFilters, FilterState, statusOptions, statusGlossary, sortOptions } from "./constants";
 import { filterBounties, getRewardBounds, getActiveRewardLabel, getContributorMetrics, getUniqueRepos, getRepoMetrics, sortBounties, debounce, SortOption, SortState, xlmToUsd } from "./utils";
 import { Bounty, CreateBountyPayload, OpenIssue, BountyStatus } from "./types";
@@ -651,17 +652,19 @@ function App() {
     const avatarUrl = bounty ? `https://github.com/${owner}.png?size=72` : "";
 
     return (
-      <BountyDetailPage
-        bounty={bounty}
-        loading={detailLoading}
-        onBack={() => navigate("/")}
-        owner={owner}
-        avatarUrl={avatarUrl}
-        statusCopy={statusCopy}
-        actionCopy={actionCopy}
-        renderActionButton={renderActionButton}
-        formatTimestamp={formatTimestamp}
-      />
+      <ErrorBoundary componentName="BountyDetailPage">
+        <BountyDetailPage
+          bounty={bounty}
+          loading={detailLoading}
+          onBack={() => navigate("/")}
+          owner={owner}
+          avatarUrl={avatarUrl}
+          statusCopy={statusCopy}
+          actionCopy={actionCopy}
+          renderActionButton={renderActionButton}
+          formatTimestamp={formatTimestamp}
+        />
+      </ErrorBoundary>
     );
   }
 
@@ -842,7 +845,8 @@ function App() {
         </section>
       )}
 
-      <section className="metrics">
+      <ErrorBoundary componentName="LeaderboardPanel">
+        <section className="metrics">
         <article className="metric-card">
           <span>Live bounties</span>
           <strong>{metrics.liveBounties}</strong>
@@ -859,15 +863,18 @@ function App() {
           <span>Released payouts</span>
           <strong>{metrics.shippedRewards}</strong>
         </article>
-      </section>
+        </section>
+      </ErrorBoundary>
 
       {error && <div className="error-banner">{error}</div>}
 
       {profileContributor && (
-        <RecommendedBounties 
-          recommendations={recommendations} 
-          loading={loading} 
-        />
+        <ErrorBoundary componentName="RecommendedBounties">
+          <RecommendedBounties 
+            recommendations={recommendations} 
+            loading={loading} 
+          />
+        </ErrorBoundary>
       )}
 
       <main className="content-grid">
