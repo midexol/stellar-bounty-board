@@ -65,11 +65,16 @@ jobs:
       - name: Run backend tests
         run: npm test
 
+
   contract:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Build Storybook
+        run: npm --prefix frontend run build-storybook
+
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
