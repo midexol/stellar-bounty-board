@@ -39,6 +39,7 @@ import SubmissionChecklistModal, { type SubmissionFormData } from "./SubmissionC
 import { BountyRecommendation, ContributorProfile, createDefaultProfile, generateRecommendations, updateProfileFromBounties } from "./recommendations";
 import RecommendedBounties from "./RecommendedBounties";
 import { statusCopy, actionCopy, readInitialFilters, FilterState, statusOptions, statusGlossary, sortOptions } from "./constants";
+import StatusFilterTabs from "./StatusFilterTabs";
 import { filterBounties, getRewardBounds, getActiveRewardLabel, getContributorMetrics, getUniqueRepos, getUniqueTokenSymbols, getRepoMetrics, sortBounties, debounce, SortOption, SortState, xlmToUsd } from "./utils";
 import { Bounty, CreateBountyPayload, OpenIssue, BountyStatus } from "./types";
 
@@ -1092,6 +1093,8 @@ function App() {
                 </div>
                 <HandCoins size={18} />
               </div>
+
+              <StatusFilterTabs status={statusFilter} onChange={setStatusFilter} />
 
               <div className="board-filters">
                 <div className="board-filters__header">
