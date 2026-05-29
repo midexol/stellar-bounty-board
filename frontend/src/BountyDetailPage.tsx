@@ -1,6 +1,6 @@
 
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Clock, Printer } from "lucide-react";
+import { ArrowUpRight, Clock, Printer, Share2 } from "lucide-react";
 
 import CopyIcon from "./CopyIcons";
 import UsdAmount from "./UsdAmount";
@@ -134,6 +134,24 @@ export default function BountyDetailPage({
     window.print();
   }
 
+  function handleShare() {
+    if (!bounty) return;
+    const permalink = `${window.location.origin}/bounties/${encodeURIComponent(bounty.id)}`;
+    navigator.clipboard.writeText(permalink).then(() => {
+      // Show brief confirmation
+      const button = document.querySelector('[aria-label="Share bounty"]') as HTMLButtonElement;
+      if (button) {
+        const originalText = button.innerHTML;
+        button.innerHTML = `<Share2 size={16} />Copied!`;
+        setTimeout(() => {
+          button.innerHTML = originalText;
+        }, 2000);
+      }
+    }).catch((err) => {
+      console.error("Failed to copy URL:", err);
+    });
+  }
+
   return (
     <div className="page-shell">
       <div className="sr-only" aria-live="polite" aria-atomic="true">
@@ -159,6 +177,17 @@ export default function BountyDetailPage({
             >
               <Printer size={16} />
               Print / Export PDF
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={handleShare}
+              disabled={loading || !bounty}
+              aria-label="Share bounty"
+              title="Share bounty link"
+            >
+              <Share2 size={16} />
+              Share
             </button>
             <button
               type="button"
