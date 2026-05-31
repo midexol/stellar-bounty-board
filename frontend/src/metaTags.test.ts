@@ -12,15 +12,15 @@ describe("updateSocialMetaTags", () => {
     
     // Mock window.location
     delete (window as any).location;
-    window.location = {
+    (window as any).location = {
       ...originalLocation,
       origin: "https://stellar-bounty.com",
-    } as Location;
+    };
   });
 
   afterEach(() => {
     // Restore original location
-    window.location = originalLocation;
+    (window as any).location = originalLocation;
   });
 
   it("should set default meta tags when bounty is null", () => {
