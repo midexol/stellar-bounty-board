@@ -147,7 +147,7 @@ export interface SortState {
 }
 
 export function sortBounties(bounties: Bounty[], sort: SortState): Bounty[] {
-  const sorted = [...bounties].sort((a, b) => {
+  return [...bounties].sort((a, b) => {
     let comparison = 0;
 
     switch (sort.option) {
@@ -180,7 +180,7 @@ export function sortBounties(bounties: Bounty[], sort: SortState): Bounty[] {
 export function getActiveRewardLabel(
   minReward: string,
   maxReward: string,
-  bounds: { lowest: number; highest: number }
+  bounds: { lowest: number; highest: number },
 ): string {
   const min = minReward === '' ? bounds.lowest : Number(minReward);
   const max = maxReward === '' ? bounds.highest : Number(maxReward);
@@ -266,10 +266,7 @@ export function getContributorMetrics(bounties: Bounty[], contributorAddress?: s
     };
   }
 
-  const contributorBounties = bounties.filter(
-    (bounty) => bounty.contributor === contributorAddress
-  );
-
+  const contributorBounties = bounties.filter((bounty) => bounty.contributor === contributorAddress);
   const countsByStatus = new Map<BountyStatus, number>();
   const releasedTotalsByAsset = new Map<string, number>();
 

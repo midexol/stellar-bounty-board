@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { toast } from 'sonner';
+import type { Bounty } from './types';
 
 vi.mock('sonner', () => ({
   toast: {
@@ -26,7 +27,7 @@ vi.mock('./api', () => ({
 import * as api from './api';
 import App from './App';
 
-const baseBounty = {
+const baseBounty: Bounty = {
   id: 'BNTY-1',
   repo: 'ritik4ever/stellar-bounty-board',
   issueNumber: 1,

@@ -214,6 +214,19 @@ export async function getBounty(id: string): Promise<Bounty> {
   return body.data;
 }
 
+export async function getBounty(id: string, signal?: AbortSignal): Promise<Bounty> {
+  const body = await requestJson<{ data: Bounty }>(`/bounties/${id}`, {
+    retry: true,
+    retryLabel: "Loading bounty details",
+    signal,
+export async function getBounty(id: string): Promise<Bounty> {
+  const body = await requestJson<{ data: Bounty }>(`/bounties/${id}`, {
+    retry: true,
+    retryLabel: "Loading bounty",
+  });
+  return body.data;
+}
+
 export async function createBounty(payload: CreateBountyPayload): Promise<Bounty> {
   const body = await requestJson<{ data: Bounty }>('/bounties', {
     method: 'POST',

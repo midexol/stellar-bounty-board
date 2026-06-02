@@ -11,7 +11,6 @@ import {
   createBounty,
   listBountyAuditLogs,
   listBounties,
-  listBountiesCached,
   refundBounty,
   releaseBounty,
   reserveBounty,
@@ -93,7 +92,6 @@ function requestContextMiddleware(req: Request, res: Response, next: NextFunctio
 
 export const app = express();
 
-app.use(compression({ threshold: 1024 }));
 app.use(cors(buildCorsOptions()));
 
 app.use(
@@ -245,6 +243,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
     service: 'stellar-bounty-board-backend',
     status: 'ok',
     timestamp: new Date().toISOString(),
+    openIssuesFeed,
   });
 });
 
