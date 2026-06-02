@@ -514,11 +514,11 @@ function App() {
   }, []);
   // ─────────────────────────────────────────────────────────────────────────
 
-  function navigate(nextPath: string) {
+  const navigate = useCallback((nextPath: string) => {
     if (nextPath === window.location.pathname) return;
     window.history.pushState(null, "", nextPath);
     setPathname(nextPath);
-  }
+  }, []);
 
   const metrics = useMemo(() => {
     const activePool = bounties.filter((bounty: Bounty) =>

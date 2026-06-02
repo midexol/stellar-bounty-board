@@ -49,19 +49,18 @@ beforeEach(() => {
 
 describe("SubmissionChecklistModal keyboard accessibility", () => {
   it("focuses the first input and traps focus while tabbing", async () => {
-    const user = userEvent.setup();
     renderModal();
 
     const contributorInput = screen.getByLabelText(/contributor stellar address/i);
     await waitFor(() => expect(contributorInput).toHaveFocus());
 
-    await user.tab();
+    fireEvent.keyDown(contributorInput, { key: "Tab" });
     expect(screen.getByLabelText(/pull request or demo url/i)).toHaveFocus();
 
-    await user.tab();
+    fireEvent.keyDown(screen.getByLabelText(/pull request or demo url/i), { key: "Tab" });
     expect(screen.getByRole("checkbox", { name: /tests written or updated/i })).toHaveFocus();
 
-    await user.tab();
+    fireEvent.keyDown(screen.getByRole("checkbox", { name: /tests written or updated/i }), { key: "Tab" });
     expect(screen.getByLabelText(/notes for the maintainer/i)).toHaveFocus();
 
     fireEvent.keyDown(screen.getByLabelText(/notes for the maintainer/i), { key: "Tab" });
@@ -75,6 +74,18 @@ describe("SubmissionChecklistModal keyboard accessibility", () => {
 
     fireEvent.keyDown(screen.getByRole("button", { name: "Close" }), { key: "Tab" });
     expect(contributorInput).toHaveFocus();
+
+    fireEvent.keyDown(contributorInput, { key: "Tab", shiftKey: true });
+    expect(screen.getByRole("button", { name: "Close" })).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "Close" }), { key: "Tab", shiftKey: true });
+    expect(screen.getByRole("button", { name: "Submit work" })).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "Submit work" }), { key: "Tab", shiftKey: true });
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "Cancel" }), { key: "Tab", shiftKey: true });
+    expect(screen.getByLabelText(/notes for the maintainer/i)).toHaveFocus();
   });
 
   it("closes through Escape", async () => {
