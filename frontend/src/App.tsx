@@ -820,19 +820,21 @@ function App() {
     const avatarUrl = bounty ? `https://github.com/${owner}.png?size=72` : "";
 
     return (
-      <Suspense fallback={<div className="empty-state">Loading bounty...</div>}>
-        <BountyDetailPage
-          bounty={bounty}
-          loading={detailLoading}
-          onBack={() => navigate("/")}
-          owner={owner}
-          avatarUrl={avatarUrl}
-          statusCopy={statusCopy}
-          actionCopy={actionCopy}
-          renderActionButton={renderActionButton}
-          formatTimestamp={formatTimestamp}
-        />
-      </Suspense>
+      <ErrorBoundary componentName="BountyDetailPage">
+        <Suspense fallback={<div className="empty-state">Loading bounty...</div>}>
+          <BountyDetailPage
+            bounty={bounty}
+            loading={detailLoading}
+            onBack={() => navigate("/")}
+            owner={owner}
+            avatarUrl={avatarUrl}
+            statusCopy={statusCopy}
+            actionCopy={actionCopy}
+            renderActionButton={renderActionButton}
+            formatTimestamp={formatTimestamp}
+          />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
