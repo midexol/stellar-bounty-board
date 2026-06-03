@@ -29,6 +29,7 @@ import {
 } from "./api";
 
 
+
 import SkeletonBountyCard from "./SkeletonBountyCard";
 import EmptyState from "./EmptyState";
 import { ShortcutsHelpOverlay } from "./ShortcutsHelpOverlay";
@@ -693,6 +694,11 @@ function App() {
       : null;
   }, [pathname]);
 
+  const contributorRoute = useMemo(() => {
+    const match = pathname.match(/^\/contributor\/([^/]+)$/);
+    return match ? { address: decodeURIComponent(match[1]) } : null;
+  }, [pathname]);
+
   // Fetch single bounty via dedicated API endpoint instead of filtering the full list
   useEffect(() => {
     if (!detailId) {
@@ -835,6 +841,15 @@ function App() {
           />
         </Suspense>
       </ErrorBoundary>
+    );
+  }
+
+  if (contributorRoute) {
+    return (
+      <ContributorProfilePage
+        address={contributorRoute.address}
+        onBack={() => navigate("/")}
+      />
     );
   }
 
