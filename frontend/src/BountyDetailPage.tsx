@@ -2,7 +2,7 @@
 import { ReactNode, useCallback, useState } from "react";
 import { ArrowUpRight, Check, Clock, Copy } from "lucide-react";
 import UsdAmount from "./UsdAmount";
-import { Bounty, BountyEvent, BountyStatus } from "./types";
+
 
 type BountyAction = "reserve" | "submit" | "release" | "refund";
 
@@ -194,7 +194,10 @@ export default function BountyDetailPage({
               </div>
               <div>
                 <span className="meta-label">Deadline</span>
-                <strong>{formatTimestamp(bounty.deadlineAt)}</strong>
+                <strong>
+                  {formatTimestamp(bounty.deadlineAt)}{" "}
+                  <BountyCountdown deadlineAt={bounty.deadlineAt} status={bounty.status} />
+                </strong>
               </div>
               <div>
                 <span className="meta-label">Maintainer</span>
