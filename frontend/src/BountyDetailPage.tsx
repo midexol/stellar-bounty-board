@@ -1,11 +1,11 @@
-
-import { ReactNode, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Clock, Printer } from "lucide-react";
-
-import CopyIcon from "./CopyIcons";
+import { ReactNode, useState, useCallback, useEffect, useRef } from "react";
+import { ArrowUpRight, Check, Clock, Copy, Share2, Printer } from "lucide-react";
+import { Bounty, BountyEvent, BountyStatus } from "./types";
+import BountyCountdown from "./BountyCountdown";
 import UsdAmount from "./UsdAmount";
-import type { Bounty, BountyEvent, BountyStatus } from "./types";
 import { updateSocialMetaTags } from "./metaTags";
+import CopyIcon from "./CopyIcons";
+
 
 type BountyAction = "reserve" | "submit" | "release" | "refund";
 
@@ -118,13 +118,11 @@ export default function BountyDetailPage({
   renderActionButton,
   formatTimestamp,
 }: Props) {
+
   const statusAnnouncement = useBountyStatusAnnouncement(bounty, statusCopy);
 
-  // Update social meta tags when bounty data changes
   useEffect(() => {
     updateSocialMetaTags(bounty);
-
-    // Cleanup: reset meta tags when component unmounts
     return () => {
       updateSocialMetaTags(null);
     };
@@ -132,6 +130,24 @@ export default function BountyDetailPage({
 
   function handlePrint() {
     window.print();
+  }
+
+  function handleShare() {
+    if (!bounty) return;
+    const permalink = `${window.location.origin}/bounties/${encodeURIComponent(bounty.id)}`;
+    navigator.clipboard.writeText(permalink).then(() => {
+      // Show brief confirmation
+      const button = document.querySelector('[aria-label="Share bounty"]') as HTMLButtonElement;
+      if (button) {
+        const originalText = button.innerHTML;
+        button.innerHTML = `<Share2 size={16} />Copied!`;
+        setTimeout(() => {
+          button.innerHTML = originalText;
+        }, 2000);
+      }
+    }).catch((err) => {
+      console.error("Failed to copy URL:", err);
+    });
   }
 
   return (
@@ -230,7 +246,10 @@ export default function BountyDetailPage({
               </div>
               <div>
                 <span className="meta-label">Deadline</span>
-                <strong>{formatTimestamp(bounty.deadlineAt)}</strong>
+                <strong>
+                  {formatTimestamp(bounty.deadlineAt)}{" "}
+                  <BountyCountdown deadlineAt={bounty.deadlineAt} status={bounty.status} />
+                </strong>
               </div>
               <div>
                 <span className="meta-label">Maintainer</span>
@@ -294,7 +313,7 @@ export default function BountyDetailPage({
 
             {bounty.labels.length > 0 && (
               <div className="chip-row chip-row--spaced">
-                {bounty.labels.map((label) => (
+                {bounty.labels.map((label: any) => (
                   <span className="chip" key={label.name}>
   {label.name}
 </span>

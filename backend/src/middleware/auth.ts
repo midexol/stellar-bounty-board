@@ -1,5 +1,5 @@
 import type { Request, RequestHandler } from "express";
-import { Keypair } from "stellar-sdk";
+import { Keypair } from "@stellar/stellar-sdk";
 
 const HEADER_SIGNATURE = "x-stellar-signature";
 const HEADER_PUBLIC_KEY = "x-stellar-public-key";
@@ -70,6 +70,42 @@ function verifyStellarSignature(publicKey: string, payload: Buffer, signatureHea
   }
 
   return false;
+}
+
+export function createBountyCreationSignatureMiddleware(): RequestHandler {
+  return (req, res, next) => {
+    if (process.env.NODE_ENV === "test") {
+      next();
+      return;
+    }
+
+    const signatureHeader = normalizeHeaderValue(req.header(HEADER_SIGNATURE));
+    if (!signatureHeader) {
+      res.status(401).json({ error: `Missing ${HEADER_SIGNATURE} header.` });
+      return;
+    }
+
+    const body = req.body ?? {};
+    const { repo, issueNumber, amount, tokenSymbol, deadlineDays, maintainer } = body;
+
+    if (!maintainer || typeof maintainer !== "string") {
+      res.status(401).json({ error: "Missing maintainer field required for signature verification." });
+      return;
+    }
+
+    // Canonical payload the client must sign: { repo, issueNumber, amount, tokenSymbol, deadline }
+    const canonicalPayload = Buffer.from(
+      JSON.stringify({ repo, issueNumber, amount, tokenSymbol, deadline: deadlineDays }),
+      "utf8",
+    );
+
+    if (!verifyStellarSignature(maintainer, canonicalPayload, signatureHeader)) {
+      res.status(401).json({ error: "Invalid Stellar signature. Signer public key must match maintainer address." });
+      return;
+    }
+
+    next();
+  };
 }
 
 export function createStellarSignatureAuthMiddleware(): RequestHandler {

@@ -3,6 +3,7 @@ import path from "node:path";
 import { sendNotification, type NotificationRecipient } from "./notificationService";
 import { logStructured } from "../logger";
 import { getCache, type CacheAdapter } from "./cache";
+import { bountiesCreatedTotal, bountiesReleasedTotal } from "../metrics";
 
 /**
  * Represents the current state of a bounty.
@@ -553,6 +554,9 @@ export async function createBounty(input: CreateBountyInput): Promise<BountyReco
 
     writeStore([bounty, ...records]);
     await invalidateBountyCache();
+    
+    // Increment Prometheus counter for bounty creation
+    bountiesCreatedTotal.inc();
 
     // Trigger notification on create
     const recipients: NotificationRecipient[] = [{ role: "maintainer", address: input.maintainer }];
@@ -740,6 +744,10 @@ export async function releaseBounty(
       },
     ]);
     await invalidateBountyCache();
+    
+    // Increment Prometheus counter for bounty release
+    bountiesReleasedTotal.inc();
+    
     return persisted;
   });
 }

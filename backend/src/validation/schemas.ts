@@ -76,7 +76,12 @@ export const createBountySchema = z
       .openapi({ example: "XLM", description: "Stellar token symbol for payout (1–12 alphanumeric chars)." }),
     amount: z.coerce
       .number()
-      .min(1, "Amount must be at least 1 XLM."),
+      .min(1, "Amount must be at least 1 XLM.")
+      .max(10000, "Amount cannot exceed 10000 XLM.")
+      .refine((value) => Number.isInteger(value * 10_000_000), {
+        message: "Amount must have at most 7 decimal places.",
+      })
+      .openapi({ example: 100, description: "Bounty amount in XLM (1-10000, up to 7 decimal places)." }),
 
     deadlineDays: z.coerce
       .number()
@@ -124,6 +129,15 @@ export const submitBountySchema = z
     contributor: stellarAccountSchema.openapi({
       description: "Must match the contributor who reserved the bounty.",
     }),
+
+    submissionUrl: z
+      .string()
+      .trim()
+      .url()
+      .openapi({ 
+        example: "https://github.com/owner/repo/pull/123",
+        description: "GitHub pull request URL for the submission." 
+      }),
 
     notes: z
       .string()
@@ -186,6 +200,9 @@ export const bountyRecordSchema = z
     refundedTxHash: z.string().optional().openapi({ example: "0".repeat(64) }),
     submissionUrl: z.string().optional().openapi({ example: "https://github.com/owner/repo/pull/99" }),
     notes: z.string().optional(),
+    version: z.number().openapi({ example: 1 }),
+    events: z.array(z.any()).openapi({ description: "Bounty lifecycle events history." }),
+    reservationTimeoutSeconds: z.number().optional().openapi({ example: 604800 }),
   })
   .openapi("BountyRecord");
 
@@ -243,6 +260,7 @@ export const healthResponseSchema = z
     service: z.string().openapi({ example: "stellar-bounty-board-backend" }),
     status: z.string().openapi({ example: "ok" }),
     timestamp: z.string().openapi({ example: "2026-03-24T19:00:00.000Z" }),
+    openIssuesFeed: z.enum(["up", "rate-limited", "stale"]).optional().openapi({ example: "up" }),
   })
   .openapi("HealthResponse");
 
