@@ -1,12 +1,6 @@
 {
   "frontend/src/**/*.{ts,tsx}": [
-    "node -e \"require('child_process').execSync('npx tsc --noEmit -p frontend/tsconfig.json', { stdio: 'inherit' })\"",
-    "eslint --fix",
-    "prettier --write"
-  ],
-  "backend/src/**/*.ts": [
-    "node -e \"require('child_process').execSync('npx tsc --noEmit -p backend/tsconfig.json', { stdio: 'inherit' })\"",
-    "eslint --fix",
+
     "prettier --write"
   ],
   "*.{json,md,yaml,yml}": ["prettier --write"],

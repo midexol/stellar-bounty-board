@@ -65,15 +65,7 @@ export const createBountySchema = z
       }),
     amount: z.coerce
       .number()
-      .min(1, 'Amount must be at least 1 XLM.')
-      .max(10000, 'Amount must not exceed 10000 XLM.')
-      .refine(
-        (val) => {
-          const parts = String(val).split('.');
-          return parts.length < 2 || parts[1].length <= 7;
-        },
-        { message: 'Amount must have at most 7 decimal places.' }
-      ),
+
 
     deadlineDays: z.coerce
       .number()
@@ -118,10 +110,7 @@ export const submitBountySchema = z
       description: 'Must match the contributor who reserved the bounty.',
     }),
 
-    submissionUrl: z.string().trim().url().openapi({
-      example: 'https://github.com/owner/repo/pull/123',
-      description: 'GitHub pull request URL for the submission.',
-    }),
+
 
     notes: z
       .string()
@@ -202,6 +191,7 @@ export const bountyRecordSchema = z
       .optional()
       .openapi({ example: 'https://github.com/owner/repo/pull/99' }),
     notes: z.string().optional(),
+
   })
   .openapi('BountyRecord');
 
@@ -267,9 +257,7 @@ export const bountyAuditLogListResponseSchema = z
 
 export const healthResponseSchema = z
   .object({
-    service: z.string().openapi({ example: 'stellar-bounty-board-backend' }),
-    status: z.string().openapi({ example: 'ok' }),
-    timestamp: z.string().openapi({ example: '2026-03-24T19:00:00.000Z' }),
+
   })
   .openapi('HealthResponse');
 
