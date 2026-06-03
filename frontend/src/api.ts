@@ -205,24 +205,11 @@ export async function listBounties(signal?: AbortSignal): Promise<Bounty[]> {
   return body.data;
 }
 
-export async function getBounty(id: string): Promise<Bounty> {
-  const body = await requestJson<{ data: Bounty }>(`/bounties/${id}`, {
-    retry: true,
-    retryLabel: 'Loading bounty',
-  });
-
-  return body.data;
-}
-
 export async function getBounty(id: string, signal?: AbortSignal): Promise<Bounty> {
   const body = await requestJson<{ data: Bounty }>(`/bounties/${id}`, {
     retry: true,
-    retryLabel: "Loading bounty details",
-    signal,
-export async function getBounty(id: string): Promise<Bounty> {
-  const body = await requestJson<{ data: Bounty }>(`/bounties/${id}`, {
-    retry: true,
     retryLabel: "Loading bounty",
+    signal,
   });
   return body.data;
 }
@@ -338,7 +325,7 @@ export async function getMaintainerMetrics(maintainer: string): Promise<Maintain
 }
 
 export async function getGlobalMetrics(): Promise<GlobalMetrics> {
-  const body = await requestJson<{ data: GlobalMetrics }>('/metrics', {
+  const body = await requestJson<{ data: GlobalMetrics }>('/global-metrics', {
     retry: true,
     retryLabel: 'Loading global metrics',
   });

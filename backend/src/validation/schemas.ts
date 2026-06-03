@@ -82,8 +82,6 @@ export const createBountySchema = z
         message: "Amount must have at most 7 decimal places.",
       })
       .openapi({ example: 100, description: "Bounty amount in XLM (1-10000, up to 7 decimal places)." }),
-      .min(1, "Amount must be at least 1 XLM."),
-
     deadlineDays: z.coerce
       .number()
       .int()
@@ -135,9 +133,9 @@ export const submitBountySchema = z
       .string()
       .trim()
       .url()
-      .openapi({ 
+      .openapi({
         example: "https://github.com/owner/repo/pull/123",
-        description: "GitHub pull request URL for the submission." 
+        description: "GitHub pull request URL for the submission."
       }),
 
     notes: z
@@ -201,6 +199,9 @@ export const bountyRecordSchema = z
     refundedTxHash: z.string().optional().openapi({ example: "0".repeat(64) }),
     submissionUrl: z.string().optional().openapi({ example: "https://github.com/owner/repo/pull/99" }),
     notes: z.string().optional(),
+    version: z.number().int().openapi({ example: 1 }),
+    events: z.array(z.any()).openapi({ description: "Array of lifecycle events." }),
+    reservationTimeoutSeconds: z.number().int().optional().openapi({ example: 604800 }),
   })
   .openapi("BountyRecord");
 

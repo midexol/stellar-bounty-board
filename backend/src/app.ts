@@ -11,6 +11,8 @@ import {
   createBounty,
   listBountyAuditLogs,
   listBounties,
+  listBountiesCached,
+  invalidateBountyCache,
   refundBounty,
   releaseBounty,
   reserveBounty,
@@ -20,7 +22,7 @@ import {
   getGlobalMetrics,
   getLeaderboard,
 } from './services/bountyStore';
-import { listOpenIssues } from './services/openIssues';
+import { listOpenIssues, getOpenIssuesStatus } from './services/openIssues';
 import {
   bountyIdSchema,
   createBountySchema,
@@ -240,10 +242,18 @@ app.get('/sitemap.xml', (_req: Request, res: Response) => {
 
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({
-    service: 'stellar-bounty-board-backend',
+    service: 'stellar-bounty-board-api',
     status: 'ok',
     timestamp: new Date().toISOString(),
-    openIssuesFeed,
+  });
+});
+
+app.get('/api/health/deep', (_req: Request, res: Response) => {
+  res.json({
+    service: 'stellar-bounty-board-api',
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    openIssuesFeed: getOpenIssuesStatus(),
   });
 });
 
@@ -495,8 +505,14 @@ app.post(
   }
 );
 
-app.get('/api/open-issues', (_req: Request, res: Response) => {
-  res.json({ data: listOpenIssues() });
+app.get('/api/open-issues', async (_req: Request, res: Response) => {
+  try {
+    const issues = await listOpenIssues();
+    res.setHeader('Cache-Control', 'max-age=600');
+    res.json({ data: issues });
+  } catch (error) {
+    sendError(res, _req, error);
+  }
 });
 
 app.get('/api/bounties/:id/events', (req: Request, res: Response) => {
