@@ -261,8 +261,22 @@ app.get('/worker/health', (_req: Request, res: Response) => {
 });
 
 app.get('/api/bounties', async (req: Request, res: Response) => {
-  const q = typeof req.query.q === 'string' ? req.query.q : undefined;
-  res.json({ data: await listBountiesCached({ q }) });
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q : undefined;
+    const page = parsePaginationValue(req.query.page, 'page', 1, 1);
+    const pageSize = parsePaginationValue(req.query.pageSize, 'pageSize', 20, 1, 100);
+
+    const all = await listBountiesCached({ q });
+    const total = all.length;
+    const start = (page - 1) * pageSize;
+    const data = all.slice(start, start + pageSize);
+    const hasMore = start + data.length < total;
+
+    res.setHeader('X-Total-Count', String(total));
+    res.json({ data, total, page, pageSize, hasMore });
+  } catch (error) {
+    sendError(res, req, error);
+  }
 });
 
 app.get('/api/leaderboard', (req: Request, res: Response) => {
