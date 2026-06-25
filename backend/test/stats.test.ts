@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BountyRecord } from "../src/services/bountyStore";
 import { CONTRIBUTOR, MAINTAINER } from "./fixtures";
 
+let tmpDir: string;
 let storeFile: string;
 
 const now = Math.floor(Date.now() / 1000);
@@ -32,7 +33,8 @@ function makeRecord(overrides: Partial<BountyRecord>): BountyRecord {
 }
 
 beforeEach(() => {
-  storeFile = path.join(os.tmpdir(), `bounty-stats-${randomUUID()}.json`);
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "bounty-stats-"));
+  storeFile = path.join(tmpDir, "store.json");
   fs.writeFileSync(storeFile, "[]", "utf8");
   process.env.BOUNTY_STORE_PATH = storeFile;
   vi.resetModules();
@@ -40,8 +42,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.BOUNTY_STORE_PATH;
-  try { fs.unlinkSync(storeFile); } catch { /* best-effort */ }
-  try { fs.unlinkSync(storeFile.replace(/\.json$/i, ".audit.json")); } catch { /* best-effort */ }
+  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* best-effort */ }
 });
 
 async function loadStore() {
