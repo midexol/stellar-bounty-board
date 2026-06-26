@@ -3,7 +3,7 @@ import cors from 'cors';
 import express, { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'node:crypto';
 import swaggerUi from 'swagger-ui-express';
-import { buildCorsOptions } from './middleware/corsOptions';
+import { buildCorsOptions, createCorsPreflightGuard, warnIfProductionCorsMisconfigured } from './middleware/corsOptions';
 import { generateOpenApiDocument } from './docs/openapi';
 import { getMetrics, httpRequestDuration } from './metrics';
 
@@ -101,6 +101,8 @@ function requestContextMiddleware(req: Request, res: Response, next: NextFunctio
 
 export const app = express();
 
+warnIfProductionCorsMisconfigured();
+app.use(createCorsPreflightGuard());
 app.use(cors(buildCorsOptions()));
 
 app.use(

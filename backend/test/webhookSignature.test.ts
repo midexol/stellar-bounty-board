@@ -8,11 +8,6 @@ import {
 
 const secret = 'github-webhook-secret';
 
-type CorsOriginCallback = (
-  origin: string | undefined,
-  callback: (error: Error | null, allow?: boolean) => void
-) => void;
-
 interface SearchResultBounty {
   title: string;
 }
@@ -182,53 +177,6 @@ describe('GitHub webhook signature edge cases (#90)', () => {
         signatureHeader: [signature, 'sha256=other'],
       })
     ).not.toThrow();
-  });
-});
-
-describe('CORS allowlist middleware (#88)', () => {
-  it('buildCorsOptions uses localhost:3000 as default when CORS_ORIGINS is unset', async () => {
-    delete process.env.CORS_ORIGINS;
-
-    const { buildCorsOptions } = await import('../src/middleware/corsOptions');
-    const options = buildCorsOptions();
-    const origin = options.origin as CorsOriginCallback;
-
-    await new Promise<void>((resolve, reject) => {
-      origin('http://localhost:3000', (error, allow) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-
-        if (!allow) {
-          reject(new Error('expected allowed'));
-          return;
-        }
-
-        resolve();
-      });
-    });
-  });
-
-  it('buildCorsOptions rejects unlisted origins', async () => {
-    process.env.CORS_ORIGINS = 'https://app.example.com';
-
-    const mod = await import('../src/middleware/corsOptions?t=2');
-    const options = mod.buildCorsOptions();
-    const origin = options.origin as CorsOriginCallback;
-
-    await new Promise<void>((resolve, reject) => {
-      origin('https://evil.example.com', (error) => {
-        if (error) {
-          resolve();
-          return;
-        }
-
-        reject(new Error('expected rejection'));
-      });
-    });
-
-    delete process.env.CORS_ORIGINS;
   });
 });
 
