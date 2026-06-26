@@ -652,6 +652,21 @@ export async function reserveBounty(
       },
     ]);
     await invalidateBountyCache();
+
+    sendNotification(
+      [{ role: "maintainer", address: bounty.maintainer }],
+      "bounty_reserved",
+      {
+        bountyId: id,
+        title: bounty.title,
+        amount: bounty.amount,
+        tokenSymbol: bounty.tokenSymbol,
+        contributor,
+      },
+    ).catch((err) =>
+      console.warn("[reserveBounty] Notification failed (non-blocking):", err),
+    );
+
     return persisted;
   });
 }
@@ -716,6 +731,22 @@ export async function submitBounty(
       },
     ]);
     await invalidateBountyCache();
+
+    sendNotification(
+      [{ role: "maintainer", address: bounty.maintainer }],
+      "bounty_submitted",
+      {
+        bountyId: id,
+        title: bounty.title,
+        amount: bounty.amount,
+        tokenSymbol: bounty.tokenSymbol,
+        contributor,
+        submissionUrl,
+      },
+    ).catch((err) =>
+      console.warn("[submitBounty] Notification failed (non-blocking):", err),
+    );
+
     return persisted;
   });
 }
@@ -781,6 +812,22 @@ export async function releaseBounty(
 
     // Increment Prometheus counter for bounty release
     bountiesReleasedTotal.inc();
+
+    if (persisted.contributor) {
+      sendNotification(
+        [{ role: "contributor", address: persisted.contributor }],
+        "bounty_released",
+        {
+          bountyId: id,
+          title: bounty.title,
+          amount: bounty.amount,
+          tokenSymbol: bounty.tokenSymbol,
+          transactionHash: persisted.releasedTxHash,
+        },
+      ).catch((err) =>
+        console.warn("[releaseBounty] Notification failed (non-blocking):", err),
+      );
+    }
 
     return persisted;
   });
@@ -849,6 +896,22 @@ export async function refundBounty(
       },
     ]);
     await invalidateBountyCache();
+
+    if (persisted.contributor) {
+      sendNotification(
+        [{ role: "contributor", address: persisted.contributor }],
+        "bounty_refunded",
+        {
+          bountyId: id,
+          title: bounty.title,
+          amount: bounty.amount,
+          tokenSymbol: bounty.tokenSymbol,
+        },
+      ).catch((err) =>
+        console.warn("[refundBounty] Notification failed (non-blocking):", err),
+      );
+    }
+
     return persisted;
   });
 }
