@@ -263,12 +263,22 @@ const healthHandler = (_req: Request, res: Response) => {
     service: 'stellar-bounty-board-api',
     status: 'ok',
     timestamp: new Date().toISOString(),
-
   });
 };
 
 app.get('/api/health', healthHandler);
-app.get('/api/health/deep', healthHandler);
+
+app.get('/api/health/deep', (_req: Request, res: Response) => {
+  const arbiterConfigured = Boolean(process.env.ARBITER_ADDRESS?.trim());
+  res.json({
+    service: 'stellar-bounty-board-api',
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    components: {
+      arbiter: arbiterConfigured ? 'configured' : 'missing',
+    },
+  });
+});
 
 app.get('/worker/health', (_req: Request, res: Response) => {
   res.json({
