@@ -80,6 +80,35 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/api/health/deep",
+  tags: ["System"],
+  summary: "Deep health check",
+  description:
+    "Extended health check that verifies critical configuration is in place. " +
+    "Returns component-level status including whether the arbiter address is configured. " +
+    "The arbiter is a trusted Stellar account that mediates bounty disputes: when a maintainer " +
+    "raises a dispute, only the configured arbiter may call `dispute_bounty` on the Soroban contract " +
+    "to resolve it in favour of either the contributor or the maintainer. " +
+    "If `components.arbiter` is `\"missing\"`, set `ARBITER_ADDRESS` in your environment.",
+  responses: {
+    200: jsonResponse(
+      "Service is healthy with component details.",
+      z.object({
+        service: z.string(),
+        status: z.string(),
+        timestamp: z.string(),
+        components: z.object({
+          arbiter: z.enum(["configured", "missing"]).openapi({
+            description: "Whether ARBITER_ADDRESS is set in the server environment.",
+          }),
+        }),
+      }),
+    ),
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/api/bounties",
   tags: ["Bounties"],
   summary: "List all bounties",
