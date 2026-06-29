@@ -209,6 +209,55 @@ describe("API — bounty list deadline filters", () => {
   });
 });
 
+describe("API — bounty list contributor filter", () => {
+  it("filters bounties by exact contributor address", async () => {
+    const app = await getApp();
+    const created = await request(app).post("/api/bounties").send(validCreateBody).expect(201);
+    const bountyId = created.body.data.id;
+
+    await request(app)
+      .post(`/api/bounties/${bountyId}/reserve`)
+      .send({ contributor: CONTRIBUTOR })
+      .expect(200);
+
+    const matched = await request(app)
+      .get("/api/bounties")
+      .query({ contributor: CONTRIBUTOR })
+      .expect(200);
+
+    expect(matched.body.data.some((b: any) => b.id === bountyId)).toBe(true);
+  });
+
+  it("returns no bounties when no contributor matches", async () => {
+    const app = await getApp();
+    const created = await request(app).post("/api/bounties").send(validCreateBody).expect(201);
+    const bountyId = created.body.data.id;
+
+    await request(app)
+      .post(`/api/bounties/${bountyId}/reserve`)
+      .send({ contributor: CONTRIBUTOR })
+      .expect(200);
+
+    const matched = await request(app)
+      .get("/api/bounties")
+      .query({ contributor: OTHER_ACCOUNT })
+      .expect(200);
+
+    expect(matched.body.data).toHaveLength(0);
+  });
+
+  it("rejects invalid contributor addresses", async () => {
+    const app = await getApp();
+
+    const res = await request(app)
+      .get("/api/bounties")
+      .query({ contributor: "not-a-valid-address" })
+      .expect(400);
+
+    expect(res.body.error).toMatch(/contributor|Stellar public key/i);
+  });
+});
+
 describe("API — admin audit log endpoint", () => {
   it("GET /api/audit-log returns all audit logs", async () => {
     const app = await getApp();
@@ -748,5 +797,37 @@ describe("GET /api/leaderboard", () => {
     expect(entry).toHaveProperty("address");
     expect(entry).toHaveProperty("totalXlm");
     expect(entry).toHaveProperty("bountiesCompleted");
+  });
+});
+
+describe("GET /api/bounties/by-issue", () => {
+  it("returns 400 when query parameters are missing", async () => {
+    const app = await getApp();
+    const res1 = await request(app).get("/api/bounties/by-issue?repo=owner/repo").expect(400);
+    expect(res1.body.error).toContain("Missing required query parameters");
+
+    const res2 = await request(app).get("/api/bounties/by-issue?issue=41").expect(400);
+    expect(res2.body.error).toContain("Missing required query parameters");
+  });
+
+  it("returns 404 when bounty is not found", async () => {
+    const app = await getApp();
+    const res = await request(app).get("/api/bounties/by-issue?repo=nonexistent/repo&issue=999").expect(404);
+    expect(res.body.error).toContain("Bounty not found");
+  });
+
+  it("returns 200 with the bounty when found", async () => {
+    const app = await getApp();
+    const { body: created } = await request(app).post("/api/bounties").send(validCreateBody).expect(201);
+    const repo = created.data.repo;
+    const issueNumber = created.data.issueNumber;
+
+    const res = await request(app)
+      .get(`/api/bounties/by-issue?repo=${repo}&issue=${issueNumber}`)
+      .expect(200);
+
+    expect(res.body.data.id).toBe(created.data.id);
+    expect(res.body.data.repo).toBe(repo);
+    expect(res.body.data.issueNumber).toBe(issueNumber);
   });
 });
