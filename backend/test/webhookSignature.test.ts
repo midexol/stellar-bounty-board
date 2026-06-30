@@ -180,6 +180,7 @@ describe('GitHub webhook signature edge cases (#90)', () => {
   });
 });
 
+
 describe('Bounty search with ?q= (#85)', () => {
   it('returns all bounties when q is empty', async () => {
     const { listBounties } = await import('../src/services/bountyStore');
